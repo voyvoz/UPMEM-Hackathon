@@ -3,6 +3,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -12,16 +14,6 @@ uint64_t get_time()
     struct timeval t;
     gettimeofday(&t, NULL);
     return 1000 * t.tv_sec + (t.tv_usec / 1000);
-}
-
-#include <fcntl.h>
-#include <semaphore.h>
-#include <signal.h>
-
-sem_t *sem;
-void intHandler(int dummy) {
-    sem_post(sem);
-    exit(-1);
 }
 
 void init(void);
@@ -34,28 +26,15 @@ void end(void);
 
 int main(void)
 {
-    bool use_sem = true;
-    sem_t *sem = sem_open("UPMEM-SEM", 0);
-    if(sem == SEM_FAILED) {
-        //perror("Opening sem failed");
-        use_sem = false;
-    }
-
-    if(use_sem)
+    bool uselock = true;
+    int fd = open("/tmp/UPMEM.lock", O_RDWR);
+    if(fd == -1)
+        uselock = false;
+    
+    if(uselock)
     {
-        struct sigaction sa = {
-            .sa_handler = intHandler,
-            .sa_flags = 0
-        };
-        sigemptyset(&sa.sa_mask);
-        sigaction(SIGSEGV, &sa, NULL);
-        sigaction(SIGINT, &sa, NULL);
-
-        printf("Waiting for execution on server...\n");
-        if(sem_wait(sem)) {
-            perror("sem wait failed");
-            return -1;
-        }
+        printf("Waiting for execution on server...\n");        
+        lockf(fd, F_LOCK, 0);
         printf("=> go\n");
     }
 
@@ -85,10 +64,10 @@ int main(void)
     printf("Cpy to: \t%ld ms\n", time_cpy_to_dpu);
     printf("Exec: \t\t%ld ms\n", time_exec);
     printf("Cpy back: \t%ld ms\n", time_cpy_back);
-
-    if(use_sem)
+    
+    if(uselock)
     {
-        sem_post(sem);
+        lockf(fd, F_ULOCK, 0);
     }
 
     return 0;
