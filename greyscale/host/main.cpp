@@ -45,9 +45,7 @@ void run_cpu(Mat image) {
 
 int main(int argc, char** argv) {
     dpu_set_t set, dpu;
-    Mat img = imread("img.jpg");
-    run_cpu(img);
-    imwrite("grey.jpg", img);
+    
     // TODO:
     // 1. Load csv into DB.
 
@@ -68,9 +66,11 @@ int main(int argc, char** argv) {
     transfer_from_dpu(set);
     auto end_transfer2 = std::chrono::high_resolution_clock::now();
 
+    Mat img = imread("img.jpg");
     auto start_cpu = std::chrono::high_resolution_clock::now();
     run_cpu(img);
     auto end_cpu = std::chrono::high_resolution_clock::now();
+    imwrite("grey.jpg", img);
 
     std::cout << "Transfer to:      " << std::chrono::duration_cast<std::chrono::milliseconds>(end_transfer-start_transfer).count() << " ms" << std::endl;
     std::cout << "DPU time:         " << std::chrono::duration_cast<std::chrono::milliseconds>(end_launch-start_launch).count() << " ms" << std::endl;
