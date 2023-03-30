@@ -68,6 +68,7 @@ int main(void)
     if(uselock)
     {
         lockf(fd, F_ULOCK, 0);
+        close(fd);
     }
 
     return 0;
