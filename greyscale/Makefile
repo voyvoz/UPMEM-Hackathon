@@ -3,7 +3,7 @@ HOST_DIR := host
 BUILDDIR ?= build
 NR_TASKLETS ?= 16
 NR_DPUS ?= 1
-INC=-I/usr/local/include/opencv4/
+INC=-Istb/
 
 define conf_filename
 	${BUILDDIR}/.NR_DPUS_$(1)_NR_TASKLETS_$(2).conf
@@ -23,7 +23,7 @@ DPU_SOURCES := $(wildcard ${DPU_DIR}/*.c)
 __dirs := $(shell mkdir -p ${BUILDDIR})
 
 COMMON_FLAGS := -g -I${COMMON_INCLUDES}
-HOST_FLAGS := ${COMMON_FLAGS} $(INC) -O3 -lstdc++ -pthread `dpu-pkg-config --cflags opencv4 --libs opencv4 dpu` -DNR_TASKLETS=${NR_TASKLETS} -DNR_DPUS=${NR_DPUS}
+HOST_FLAGS := ${COMMON_FLAGS} $(INC) -O3 -lstdc++ -pthread `dpu-pkg-config --cflags dpu --libs dpu` -DNR_TASKLETS=${NR_TASKLETS} -DNR_DPUS=${NR_DPUS}
 DPU_FLAGS := ${COMMON_FLAGS} -O2 -DNR_TASKLETS=${NR_TASKLETS}
 
 all: ${HOST_TARGET} ${DPU_TARGET}
@@ -33,7 +33,7 @@ ${CONF}:
 	touch ${CONF}
 
 ${HOST_TARGET}: ${HOST_SOURCES} ${COMMON_INCLUDES} ${CONF}
-	$(CC) -o $@ ${HOST_SOURCES} ${HOST_FLAGS}
+	g++ -o $@ ${HOST_SOURCES} ${HOST_FLAGS}
 
 ${DPU_TARGET}: ${DPU_SOURCES} ${COMMON_INCLUDES} ${CONF}
 	dpu-upmem-dpurte-clang ${DPU_FLAGS} -o $@ ${DPU_SOURCES}
