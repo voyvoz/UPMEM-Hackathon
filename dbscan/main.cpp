@@ -39,7 +39,7 @@ struct student_chunk *alloc_chunk();
 void db_add_record(struct database* db, struct student_record* sr);
 struct database* new_database();
 
-extern "C" struct database* db;
+struct database* db;
 
 std::size_t load_csv(const std::string &path, struct database *db) {
     std::size_t count = 0;
@@ -107,8 +107,8 @@ void db_add_record(struct database* db, struct student_record* sr) {
 
 int main(void)
 {
-    auto db = new_database();
-    auto count = load_csv("./student_data.csv", db);
+    db = new_database();
+    size_t count = load_csv("./student_data.csv", db);
     std::cout << "Loaded " << count << " items into DB" << std::endl;
 
     bool uselock = true;
