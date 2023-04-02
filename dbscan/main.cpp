@@ -1,14 +1,36 @@
-#include <dpu>
-#include <dpu_management.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdexcept>
 #include <sstream>
-#include <chrono> 
 #include <string.h>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
-#include "../common/db.h"
+#include "db.h"
+
+#include <sys/time.h>
+#include <sys/resource.h>
+
+uint64_t get_time()
+{
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return 1000 * t.tv_sec + (t.tv_usec / 1000);
+}
+
+void init(void);
+
+void transferToDPUs(void);
+void run(void);
+void transferFromDPUs(void);
+
+void end(void);
 
 typedef std::vector<struct student_records*> result_set;
 
@@ -16,6 +38,8 @@ void chunk_add_record(student_chunk *sc, student_record *sr);
 struct student_chunk *alloc_chunk();
 void db_add_record(struct database* db, struct student_record* sr);
 struct database* new_database();
+
+extern "C" struct database* db;
 
 std::size_t load_csv(const std::string &path, struct database *db) {
     std::size_t count = 0;
@@ -49,63 +73,6 @@ std::size_t load_csv(const std::string &path, struct database *db) {
     return count;
 }
 
-void transfer_to_dpu(struct database *db, dpu_set_t &set) {
-
-}
-
-void run_dpu(dpu_set_t &set) {
-
-}
-
-void transfer_from_dpu(dpu_set_t &set, result_set &rs) {
-
-}
-
-void run_cpu(result_set &rs) {
-
-}
-
-int main() {
-    auto db = new_database();
-
-    dpu_set_t set, dpu;
-
-    // TODO:
-    // 1. Load csv into DB.
-    auto count = load_csv("./student_data.csv", db);
-    std::cout << "Loaded " << count << " items into DB" << std::endl;
-
-    // 2. Initialize DPU environment.
-
-    // 3. Push data to MRAM of DPUs.
-    auto start_transfer = std::chrono::high_resolution_clock::now();
-    transfer_to_dpu(db, set);
-    auto end_transfer = std::chrono::high_resolution_clock::now();
-
-    // 4. Run DPUs.
-    auto start_launch = std::chrono::high_resolution_clock::now();
-    run_dpu(set);
-    auto end_launch = std::chrono::high_resolution_clock::now();
-
-    // 5. Obtain results from DPUs.
-    result_set rs;
-    auto start_transfer2 = std::chrono::high_resolution_clock::now();
-    transfer_from_dpu(set, rs);
-    auto end_transfer2 = std::chrono::high_resolution_clock::now();
-
-    result_set rs2;
-    auto start_cpu = std::chrono::high_resolution_clock::now();
-    run_cpu(rs);
-    auto end_cpu = std::chrono::high_resolution_clock::now();
-
-    std::cout << "Transfer to:      " << std::chrono::duration_cast<std::chrono::milliseconds>(end_transfer-start_transfer).count() << " ms" << std::endl;
-    std::cout << "DPU time:         " << std::chrono::duration_cast<std::chrono::milliseconds>(end_launch-start_launch).count() << " ms" << std::endl;
-    std::cout << "Transfer from:    " << std::chrono::duration_cast<std::chrono::milliseconds>(end_transfer2-start_transfer2).count() << " ms" << std::endl;
-    std::cout << "Baseline:         " << std::chrono::duration_cast<std::chrono::milliseconds>(end_cpu-start_cpu).count() << " ms" << std::endl;      
-
-    return 0;
-}
-
 void chunk_add_record(student_chunk *sc, student_record *sr) {
     sc->records[sc->count++] = *sr;
 }
@@ -136,4 +103,58 @@ void db_add_record(struct database* db, struct student_record* sr) {
 
     prev->next = alloc_chunk();
     chunk_add_record(prev->next, sr);
+}
+
+int main(void)
+{
+    auto db = new_database();
+    auto count = load_csv("./student_data.csv", db);
+    std::cout << "Loaded " << count << " items into DB" << std::endl;
+
+    bool uselock = true;
+    int fd = open("/tmp/UPMEM.lock", O_RDWR);
+    if(fd == -1)
+        uselock = false;
+    
+    if(uselock)
+    {
+        printf("Waiting for execution on server...\n");        
+        lockf(fd, F_LOCK, 0);
+        printf("=> go\n");
+    }
+
+    init();
+
+    // copy data to DPUs
+    uint64_t begin_cpy_to_dpu = get_time();
+    transferToDPUs();
+    uint64_t end_cpy_to_dpu = get_time();
+    uint64_t time_cpy_to_dpu = (uint64_t)(end_cpy_to_dpu - begin_cpy_to_dpu);
+
+    // launch program
+    uint64_t begin_exec = get_time();
+    run();
+    uint64_t end_exec = get_time();
+    uint64_t time_exec = (uint64_t)(end_exec - begin_exec);
+
+    // copy result back
+    uint64_t begin_cpy_back = get_time();
+    transferFromDPUs();
+    uint64_t end_cpy_back = get_time();
+    uint64_t time_cpy_back = (uint64_t)(end_cpy_back - begin_cpy_back);
+
+    end();
+
+    // print timings
+    printf("Cpy to: \t%ld ms\n", time_cpy_to_dpu);
+    printf("Exec: \t\t%ld ms\n", time_exec);
+    printf("Cpy back: \t%ld ms\n", time_cpy_back);
+    
+    if(uselock)
+    {
+        lockf(fd, F_ULOCK, 0);
+        close(fd);
+    }
+
+    return 0;
 }

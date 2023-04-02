@@ -1,50 +1,22 @@
-DPU_DIR := dpu
-HOST_DIR := host
-BUILDDIR ?= build
 NR_TASKLETS ?= 16
-NR_DPUS ?= 1
+CFLAGS_DPU ?= -O3
+CFLAGS_HOST ?= -O3
 
-define conf_filename
-	${BUILDDIR}/.NR_DPUS_$(1)_NR_TASKLETS_$(2).conf
-endef
-CONF := $(call conf_filename,${NR_DPUS},${NR_TASKLETS})
+all: db_scan db_scan_host
 
-HOST_PYTHON_SCRIPT := ${HOST_DIR}/host.py
-HOST_TARGET := ${BUILDDIR}/host
-DPU_TARGET := ${BUILDDIR}/dpu
+db_scan: db_scan.c
+	dpu-upmem-dpurte-clang -DNR_TASKLETS=${NR_TASKLETS} ${CFLAGS_DPU} -o db_scan db_scan.c
 
-COMMON_INCLUDES := common
-HOST_SOURCES := $(wildcard ${HOST_DIR}/*.cpp)
-DPU_SOURCES := $(wildcard ${DPU_DIR}/*.c)
+db_scan_host: db_scan_host.c main.cpp
+	g++ -DNR_TASKLETS=${NR_TASKLETS} ${CFLAGS_HOST} -D_GNU_SOURCE db_scan_host.c main.cpp -o db_scan_host `dpu-pkg-config --cflags --libs dpu` -lpthread
 
-.PHONY: all clean test
+docker_build:
+	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src upmem-docker bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS}"
 
-__dirs := $(shell mkdir -p ${BUILDDIR})
-
-COMMON_FLAGS := -g -I${COMMON_INCLUDES}
-HOST_FLAGS := ${COMMON_FLAGS} -O3 -lstdc++ `dpu-pkg-config --cflags --libs dpu` -DNR_TASKLETS=${NR_TASKLETS} -DNR_DPUS=${NR_DPUS}
-DPU_FLAGS := ${COMMON_FLAGS} -O2 -DNR_TASKLETS=${NR_TASKLETS}
-
-all: ${HOST_TARGET} ${DPU_TARGET}
-
-${CONF}:
-	$(RM) $(call conf_filename,*,*)
-	touch ${CONF}
-
-${HOST_TARGET}: ${HOST_SOURCES} ${COMMON_INCLUDES} ${CONF}
-	$(CC) -o $@ ${HOST_SOURCES} ${HOST_FLAGS}
-
-${DPU_TARGET}: ${DPU_SOURCES} ${COMMON_INCLUDES} ${CONF}
-	dpu-upmem-dpurte-clang ${DPU_FLAGS} -o $@ ${DPU_SOURCES}
+docker_run:
+	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src upmem-docker bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS} && ./db_scan_host"
 
 clean:
-	$(RM) -r $(BUILDDIR)
+	rm -rf db_scan db_scan_host
 
-test_c: ${HOST_TARGET} ${DPU_TARGET}
-	./${HOST_TARGET}
-
-test_python: ${DPU_TARGET}
-	python3 ${HOST_PYTHON_SCRIPT} ${NR_DPUS} ${NR_TASKLETS}
-
-test: test_c test_python
-
+.PHONY: all docker_build docker_run
