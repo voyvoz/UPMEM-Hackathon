@@ -57,13 +57,12 @@ void end(void)
     // TODO: free DPUs
 
     // check result
-    for(size_t i = 0; i < SIZE_VEC; i++)
+    for(size_t i = 0; i < DIM; i++)
     {
         for(size_t j = 0; j < DIM; j++)
         {
-            res_cpu[i] += mat[i * DIM + j];
+            res_cpu[j] += mat[j * DIM + i] * vec[i];
         }
-        res_cpu[i] *= vec[i];
         if(fabs(res[i] - res_cpu[i]) > 0.001f)
         {
             printf("Error at vec[%ld]: %f != %f\n", i, res[i], res_cpu[i]);
