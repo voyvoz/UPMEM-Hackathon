@@ -63,6 +63,9 @@ void end(void)
         {
             res_cpu[j] += mat[j * DIM + i] * vec[i];
         }
+    }
+    for(size_t i = 0; i < DIM; i++)
+    {
         if(fabs(res[i] - res_cpu[i]) > 0.001f)
         {
             printf("Error at vec[%ld]: %f != %f\n", i, res[i], res_cpu[i]);
