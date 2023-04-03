@@ -9,7 +9,7 @@ db_scan: db_scan.c
 	dpu-upmem-dpurte-clang -DNR_TASKLETS=${NR_TASKLETS} ${CFLAGS_DPU} -o db_scan db_scan.c
 
 db_scan_host: db_scan_host.c main.cpp
-	g++ -DNR_TASKLETS=${NR_TASKLETS} ${CFLAGS_HOST} -D_GNU_SOURCE db_scan_host.c main.cpp -o db_scan_host `dpu-pkg-config --cflags --libs dpu` -lpthread
+	gcc -DNR_TASKLETS=${NR_TASKLETS} ${CFLAGS_HOST} -D_GNU_SOURCE db_scan_host.c main.cpp -o db_scan_host -lstdc++ `dpu-pkg-config --cflags --libs dpu` -lpthread
 
 docker_build:
 	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src ${DOCKER_NAME} bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS}"

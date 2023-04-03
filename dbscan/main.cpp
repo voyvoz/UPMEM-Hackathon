@@ -24,6 +24,8 @@ uint64_t get_time()
     return 1000 * t.tv_sec + (t.tv_usec / 1000);
 }
 
+extern "C"
+{
 void init(void);
 
 void transferToDPUs(void);
@@ -31,6 +33,7 @@ void run(void);
 void transferFromDPUs(void);
 
 void end(void);
+}
 
 typedef std::vector<struct student_records*> result_set;
 
