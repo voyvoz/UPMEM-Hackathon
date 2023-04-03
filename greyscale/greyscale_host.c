@@ -61,9 +61,9 @@ void end(void)
         for(int j = 0; j < width; j++)
         {
             unsigned char greyScale = img_in[i * width * 3 + j * 3 + 0] * 0.22f + img_in[i * width * 3 + j * 3 + 1] * 0.11 + img_in[i * width * 3 + j * 3 + 2] * 0.58;
-            img_out_cpu[i * width * 3 + j * 3 + 0] = greyScale; // B
+            img_out_cpu[i * width * 3 + j * 3 + 0] = greyScale; // R
             img_out_cpu[i * width * 3 + j * 3 + 1] = greyScale; // G
-            img_out_cpu[i * width * 3 + j * 3 + 2] = greyScale; // R
+            img_out_cpu[i * width * 3 + j * 3 + 2] = greyScale; // B
         }
     }
     /*for(size_t i = 0; i < (width * height * 3); i++)
