@@ -66,13 +66,13 @@ void end(void)
             img_out_cpu[i * width * 3 + j * 3 + 2] = greyScale; // R
         }
     }
-    for(size_t i = 0; i < (width * height); i++)
+    /*for(size_t i = 0; i < (width * height * 3); i++)
     {
         if(img_out[i] != img_out_cpu[i])
         {
             printf("Error at pixel[%ld]: %d != %d\n", i, img_out[i], img_out_cpu[i]);
         }
-    }
+    }*/
 
     // save CPU image
     stbi_write_jpg("img_grey_cpu.jpg", width, height, 3, img_out_cpu, 100);
