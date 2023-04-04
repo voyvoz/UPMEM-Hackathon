@@ -108,10 +108,16 @@ void db_add_record(struct database* db, struct student_record* sr) {
     chunk_add_record(prev->next, sr);
 }
 
-int main(void)
+int main(int argc, char const *argv[])
 {
+    if(argc != 2)
+    {
+        std::cout << "Usage: " << argv[0] << " db" << std::endl;
+        return 0;
+    }
+
     db = new_database();
-    size_t count = load_csv("./student_data.csv", db);
+    size_t count = load_csv(argv[1], db);
     std::cout << "Loaded " << count << " items into DB" << std::endl;
 
     bool uselock = true;

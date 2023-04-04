@@ -15,7 +15,7 @@ docker_build:
 	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src ${DOCKER_NAME} bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS}"
 
 docker_run:
-	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src ${DOCKER_NAME} bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS} && ./db_scan_host"
+	docker run -it --rm --name=upmem --mount type=bind,source=${PWD},target=/src ${DOCKER_NAME} bash -c "cd src && make NR_TASKLETS=${NR_TASKLETS} && ./db_scan_host db_1.csv"
 
 clean:
 	rm -rf db_scan db_scan_host
